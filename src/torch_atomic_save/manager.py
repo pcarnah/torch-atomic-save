@@ -6,7 +6,8 @@ import concurrent.futures
 import logging
 import signal
 import torch
-from typing import Any, Optional, Dict, Tuple
+from typing import Any, Optional, Dict, Tuple, Union
+from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
@@ -39,7 +40,7 @@ class SlurmAtomicManager:
             futures = [f for f, _ in self._registry.values()]
         concurrent.futures.wait(futures, timeout=timeout)
 
-    def save(self, model: torch.nn.Module, path: str, tmp_dir: Optional[str] = None, half_prec: bool = False):
+    def save(self, model: torch.nn.Module, path: Union[str, Path], tmp_dir: Optional[str] = None, half_prec: bool = False):
         """
         Main entry point for saving models.
         Moves tensors to CPU and clones them to prevent race conditions.
