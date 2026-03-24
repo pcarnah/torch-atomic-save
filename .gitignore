@@ -17,6 +17,8 @@ build/
 .coverage
 .pytest_cache/
 htmlcov/
+coverage.xml
+junit.xml
 
 # User-specific files
 .idea/

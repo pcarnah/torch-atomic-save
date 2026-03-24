@@ -20,7 +20,7 @@ jobs:
           pip install -e .
       - name: Run tests with coverage
         run: |
-          pytest --cov=torch_atomic_save --cov-report=xml
+          pytest --cov=torch_atomic_save --cov-report=xml --junitxml=junit.xml -o junit_family=legacy
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v5
         with:
