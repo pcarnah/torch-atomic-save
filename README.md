@@ -1,6 +1,6 @@
 # torch-atomic-save
 
-[![Pytest](https://github.com/pcarnah/torch-atomic-save/actions/workflows/test.yml/badge.svg)](https://github.com/yourusername/torch-atomic-save/actions)
+[![Pytest](https://github.com/pcarnah/torch-atomic-save/actions/workflows/test.yml/badge.svg)](https://github.com/pcarnah/torch-atomic-save/actions)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 An asynchronous, atomic checkpointing utility for PyTorch, optimized for Slurm and Lustre/NFS environments.
