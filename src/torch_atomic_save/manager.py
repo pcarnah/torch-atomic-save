@@ -25,7 +25,7 @@ class SlurmAtomicManager:
         )
         # path -> (future, cancellation_event)
         self._registry: Dict[str, Tuple[concurrent.futures.Future, threading.Event]] = {}
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
         self._shutdown_event = threading.Event()
 
     def __enter__(self):
@@ -90,10 +90,7 @@ class SlurmAtomicManager:
                 self._save_and_copy, obj, tmp_src, path, cancelled
             )
             self._registry[path] = (future, cancelled)
-        # NOTE: add_done_callback must remain outside the lock.
-        # If the future completes before this line, the callback fires
-        # synchronously on the calling thread. If that thread holds self._lock,
-        # _cleanup_registry will deadlock attempting to re-acquire it.
+
         future.add_done_callback(lambda f: self._cleanup_registry(path, f))
 
     def _cleanup_registry(self, path: str, future: concurrent.futures.Future) -> None:
