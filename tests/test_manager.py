@@ -71,7 +71,7 @@ class TestBasicSave:
         model = _make_model()
         dst = dst_dir / "ckpt_half.pt"
 
-        manager.save(model, str(dst), str(src_dir), half_prec=True)
+        manager.save(model, dst, str(src_dir), half_prec=True)
 
         path_key = os.path.abspath(str(dst))
         manager._registry[path_key][0].result(timeout=10)
@@ -511,6 +511,47 @@ class TestThreadPool:
         future = MagicMock()
         manager._cleanup_registry("non_existent_path", future)
         # Should not raise any errors
+
+    def test_done_callback_race_deterministic(self, tmp):
+        src_dir, dst_dir = tmp
+        dst = str(dst_dir / "deterministic_race.pt")
+
+        manager = SlurmAtomicManager(max_workers=4)
+        deadlock_detected = threading.Event()
+
+        try:
+            original_submit = manager._executor.submit
+
+            def delayed_submit(fn, *args, **kwargs):
+                future = original_submit(fn, *args, **kwargs)
+                # Block until the future is actually done before returning,
+                # so add_done_callback is guaranteed to fire synchronously
+                # on the calling thread which still holds self._lock
+                future.result(timeout=5.0)
+                return future
+
+            with patch('torch.save', return_value=None), \
+                    patch.object(manager, '_atomic_copy_and_cleanup', return_value=None), \
+                    patch.object(manager._executor, 'submit', side_effect=delayed_submit):
+
+                state = {k: v.cpu().clone() for k, v in _make_model().state_dict().items()}
+
+                def do_save():
+                    # This will deadlock here if the bug is present,
+                    # since _atomic_save holds self._lock when delayed_submit
+                    # returns a completed future, causing add_done_callback
+                    # to fire synchronously and re-acquire self._lock
+                    manager._atomic_save(state, dst, str(src_dir))
+
+                t = threading.Thread(target=do_save, daemon=True)
+                t.start()
+                t.join(timeout=5.0)
+
+                assert not t.is_alive(), \
+                    "Deadlock: _atomic_save hung, done callback fired while lock was held"
+        finally:
+            # Can't call shutdown normally if deadlocked — force it
+            manager._executor.shutdown(wait=False)
 
 # ===========================================================================
 # 8. Slurm Signals
